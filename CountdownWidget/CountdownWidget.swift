@@ -8,81 +8,65 @@
 import WidgetKit
 import SwiftUI
 
-struct Provider: AppIntentTimelineProvider {
-    func placeholder(in context: Context) -> SimpleEntry {
-        SimpleEntry(date: Date(), configuration: ConfigurationAppIntent())
-    }
-
-    func snapshot(for configuration: ConfigurationAppIntent, in context: Context) async -> SimpleEntry {
-        SimpleEntry(date: Date(), configuration: configuration)
-    }
-    
-    func timeline(for configuration: ConfigurationAppIntent, in context: Context) async -> Timeline<SimpleEntry> {
-        var entries: [SimpleEntry] = []
-
-        // Generate a timeline consisting of five entries an hour apart, starting from the current date.
-        let currentDate = Date()
-        for hourOffset in 0 ..< 5 {
-            let entryDate = Calendar.current.date(byAdding: .hour, value: hourOffset, to: currentDate)!
-            let entry = SimpleEntry(date: entryDate, configuration: configuration)
-            entries.append(entry)
+extension View {
+    func widgetBackground(backgroundView: some View) -> some View {
+        if #available(watchOS 10.0, iOSApplicationExtension 17.0, iOS 17.0, macOSApplicationExtension 14.0, *) {
+            return containerBackground(for: .widget) {
+                backgroundView
+            }
+        } else {
+            return background(backgroundView)
         }
-
-        return Timeline(entries: entries, policy: .atEnd)
     }
-
-//    func relevances() async -> WidgetRelevances<ConfigurationAppIntent> {
-//        // Generate a list containing the contexts this widget is relevant in.
-//    }
 }
 
-struct SimpleEntry: TimelineEntry {
-    let date: Date
-    let configuration: ConfigurationAppIntent
-}
-
-struct CountdownWidgetEntryView : View {
-    var entry: Provider.Entry
+struct CountdownWidgetEntryView: View {
+    var entry: CountdownWidgetProvider.Entry
+    
+    
 
     var body: some View {
-        VStack {
-            Text("Time:")
-            Text(entry.date, style: .time)
+        
+        
+        ZStack {  // Set the color you want and adjust the opacity
+        
+            Image("NewHouseBackground")
+                // Make the image resizable
+                .scaledToFill()// Ensure it fills the widget
+           
+            Color.gray.opacity(0.15)
+            
+            
+            VStack {
+                Text(entry.remainingTime)  // This is the countdown text.
+                    .font(.largeTitle)
+                    .foregroundColor(.white)
+                    .fontDesign(.serif)
 
-            Text("Favorite Emoji:")
-            Text(entry.configuration.favoriteEmoji)
+                Text("To New Home!")  // This is the countdown text.
+                    .font(.largeTitle)
+                    .foregroundColor(.white)
+                    .fontDesign(.rounded)
+                    
+                
+            }
+            
         }
+        .widgetBackground(backgroundView: Color.clear)
     }
 }
+
 
 struct CountdownWidget: Widget {
     let kind: String = "CountdownWidget"
 
     var body: some WidgetConfiguration {
-        AppIntentConfiguration(kind: kind, intent: ConfigurationAppIntent.self, provider: Provider()) { entry in
+        StaticConfiguration(kind: kind, provider: CountdownWidgetProvider()) { entry in
             CountdownWidgetEntryView(entry: entry)
-                .containerBackground(.fill.tertiary, for: .widget)
         }
+        .configurationDisplayName("Event Countdown")
+        .description("Displays a countdown to a specific event.")
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
 
-extension ConfigurationAppIntent {
-    fileprivate static var smiley: ConfigurationAppIntent {
-        let intent = ConfigurationAppIntent()
-        intent.favoriteEmoji = "😀"
-        return intent
-    }
-    
-    fileprivate static var starEyes: ConfigurationAppIntent {
-        let intent = ConfigurationAppIntent()
-        intent.favoriteEmoji = "🤩"
-        return intent
-    }
-}
-
-#Preview(as: .systemSmall) {
-    CountdownWidget()
-} timeline: {
-    SimpleEntry(date: .now, configuration: .smiley)
-    SimpleEntry(date: .now, configuration: .starEyes)
-}
